@@ -5,13 +5,13 @@ use groupy::{CurveAffine, EncodedPoint};
 use crate::bls::Engine;
 
 #[cfg(feature = "serde")]
-use std::fmt;
-#[cfg(feature = "serde")]
-use std::marker::PhantomData;
+use serde::de::Visitor;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "serde")]
-use serde::de::Visitor;
+use std::fmt;
+#[cfg(feature = "serde")]
+use std::marker::PhantomData;
 
 #[derive(Clone, Debug)]
 pub struct Proof<E: Engine> {
@@ -37,7 +37,7 @@ fn deserialize_proof<'de, D: Deserializer<'de>, E: Engine>(d: D) -> Result<Proof
 
     impl<'de, E: Engine> Visitor<'de> for BytesVisitor<E> {
         type Value = Proof<E>;
-        
+
         fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
             write!(f, "a proof")
         }
@@ -49,7 +49,7 @@ fn deserialize_proof<'de, D: Deserializer<'de>, E: Engine>(d: D) -> Result<Proof
     }
     d.deserialize_bytes(BytesVisitor { _ph: PhantomData })
 }
-    
+
 #[cfg(feature = "serde")]
 impl<'de, E: Engine> Deserialize<'de> for Proof<E> {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -235,10 +235,10 @@ mod test_with_bls12_381 {
     };
     use crate::{Circuit, ConstraintSystem, SynthesisError};
 
-    use ff::Field;
-    use rand::thread_rng;
     #[cfg(feature = "serde")]
     use bincode::{deserialize, serialize};
+    use ff::Field;
+    use rand::thread_rng;
 
     #[test]
     fn test_size() {
