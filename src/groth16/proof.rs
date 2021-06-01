@@ -4,11 +4,57 @@ use groupy::{CurveAffine, EncodedPoint};
 
 use crate::bls::Engine;
 
+#[cfg(feature = "serde")]
+use std::fmt;
+#[cfg(feature = "serde")]
+use std::marker::PhantomData;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::de::Visitor;
+
 #[derive(Clone, Debug)]
 pub struct Proof<E: Engine> {
     pub a: E::G1Affine,
     pub b: E::G2Affine,
     pub c: E::G1Affine,
+}
+
+#[cfg(feature = "serde")]
+impl<E: Engine> Serialize for Proof<E> {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let mut v = Vec::with_capacity(Proof::<E>::size());
+        self.write(&mut v).unwrap();
+        s.serialize_bytes(&v)
+    }
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_proof<'de, D: Deserializer<'de>, E: Engine>(d: D) -> Result<Proof<E>, D::Error> {
+    struct BytesVisitor<E> {
+        _ph: PhantomData<E>,
+    }
+
+    impl<'de, E: Engine> Visitor<'de> for BytesVisitor<E> {
+        type Value = Proof<E>;
+        
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "a proof")
+        }
+        #[inline]
+        fn visit_bytes<F: serde::de::Error>(self, v: &[u8]) -> Result<Self::Value, F> {
+            let p = Proof::read(v).unwrap();
+            Ok(p)
+        }
+    }
+    d.deserialize_bytes(BytesVisitor { _ph: PhantomData })
+}
+    
+#[cfg(feature = "serde")]
+impl<'de, E: Engine> Deserialize<'de> for Proof<E> {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        deserialize_proof(d)
+    }
 }
 
 impl<E: Engine> PartialEq for Proof<E> {
@@ -191,6 +237,8 @@ mod test_with_bls12_381 {
 
     use ff::Field;
     use rand::thread_rng;
+    #[cfg(feature = "serde")]
+    use bincode::{deserialize, serialize};
 
     #[test]
     fn test_size() {
@@ -282,6 +330,14 @@ mod test_with_bls12_381 {
 
             assert!(verify_proof(&pvk, &proof, &[c]).unwrap());
             assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
+
+            // Test serialization
+            #[cfg(feature = "serde")]
+            {
+                let serialized_proof = serialize(&proof).unwrap();
+                let de_proof: Proof<Bls12> = deserialize(&serialized_proof).unwrap();
+                assert_eq!(de_proof, proof);
+            }
         }
     }
 }
