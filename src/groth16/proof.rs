@@ -4,13 +4,9 @@ use groupy::{CurveAffine, EncodedPoint};
 
 use crate::bls::Engine;
 
-#[cfg(feature = "serde")]
 use serde::de::Visitor;
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-#[cfg(feature = "serde")]
 use std::fmt;
-#[cfg(feature = "serde")]
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug)]
@@ -20,7 +16,6 @@ pub struct Proof<E: Engine> {
     pub c: E::G1Affine,
 }
 
-#[cfg(feature = "serde")]
 impl<E: Engine> Serialize for Proof<E> {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let mut v = Vec::with_capacity(Proof::<E>::size());
@@ -29,7 +24,6 @@ impl<E: Engine> Serialize for Proof<E> {
     }
 }
 
-#[cfg(feature = "serde")]
 fn deserialize_proof<'de, D: Deserializer<'de>, E: Engine>(d: D) -> Result<Proof<E>, D::Error> {
     struct BytesVisitor<E> {
         _ph: PhantomData<E>,
@@ -50,7 +44,6 @@ fn deserialize_proof<'de, D: Deserializer<'de>, E: Engine>(d: D) -> Result<Proof
     d.deserialize_bytes(BytesVisitor { _ph: PhantomData })
 }
 
-#[cfg(feature = "serde")]
 impl<'de, E: Engine> Deserialize<'de> for Proof<E> {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         deserialize_proof(d)
@@ -234,8 +227,6 @@ mod test_with_bls12_381 {
         Parameters,
     };
     use crate::{Circuit, ConstraintSystem, SynthesisError};
-
-    #[cfg(feature = "serde")]
     use bincode::{deserialize, serialize};
     use ff::Field;
     use rand::thread_rng;
@@ -332,12 +323,9 @@ mod test_with_bls12_381 {
             assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
 
             // Test serialization
-            #[cfg(feature = "serde")]
-            {
-                let serialized_proof = serialize(&proof).unwrap();
-                let de_proof: Proof<Bls12> = deserialize(&serialized_proof).unwrap();
-                assert_eq!(de_proof, proof);
-            }
+            let serialized_proof = serialize(&proof).unwrap();
+            let de_proof: Proof<Bls12> = deserialize(&serialized_proof).unwrap();
+            assert_eq!(de_proof, proof);
         }
     }
 }
